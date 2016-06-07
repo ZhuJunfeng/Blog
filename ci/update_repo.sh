@@ -1,22 +1,13 @@
 #!/bin/bash
 
-run_or_fail() {
-    local explanation=$1
-    shift 1
-    "$@"
-    if [ $? != 0]; then
-	echo $explanation 1>&2
-	exit 1
-    fi
-}
-
+source run_or_fail.sh
 rm -f .commit_id
 
 run_or_fail "Repository folder not found." pushd $1
 run_or_fail "Could not reset git." git reset --hard HEAD
 
 COMMIT=`run_or_fail "Could not call 'git log' on repository" git log -n1`
-if [ $? != 0]; then
+if [ $? != 0 ]; then
     echo "Could not call 'git log' on repository"
     exit 1
 fi
@@ -24,7 +15,7 @@ COMMIT_ID=`echo $COMMIT | awk '{ print $2 }'`
 
 run_or_fail "Could not pull from repository." git pull
 COMMIT=`run_or_fail "Could not call 'git log' on repository" git log -n1`
-if [ $? != 0]; then
+if [ $? != 0 ]; then
     echo "Could not call 'git log' on repository"
     exit 1
 fi

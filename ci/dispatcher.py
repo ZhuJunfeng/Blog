@@ -1,29 +1,17 @@
+"""
+Dispatch tests to test_runner.
+Test_runner can register and return results.
+It can redistribute if a runner is down.
+"""
+import os
 import socket
 import threading
 import SocketServer
+import re
+import argparse
+import time
 
-
-def manage_commit_lists(runner):
-    for commit, assigned_runner in server.dispatched_commits.iteritems():
-        if assigned_runner == runner:
-            del server.dispatched_commits[commit]
-            server.pending_commits.append(commit)
-            break
-    server.runners.remove(runner)
-
-
-def runner_checker(server):
-    while not server.dead:
-        time.sleep(1)
-        for runner in server.runners:
-            try:
-                response = helpers.communicate(runner["host"],
-                                               int(runner["port"]),
-                                               "ping")
-                if response != "pong":
-                    manage_commit_lists(runner)
-            except socket.error as e:
-                manage_commit_lists(runner)
+import helpers
 
 
 def dispatch_tests(server, commit_id):
@@ -33,34 +21,26 @@ def dispatch_tests(server, commit_id):
             response = helpers.communicate(runner["host"],
                                            int(runner["port"]),
                                            "runtest:%s" % commit_id)
-            if reponse == "OK":
+            if response == "OK":
                 print "adding id %s" % commit_id
                 server.dispatched_commits[commit_id] = runner
                 if commit_id in server.pending_commits:
                     server.pending_commits.remove(commit_id)
                 return
-        time_sleep(2)
+        time.sleep(2)
 
 
-def redistribute(server):
-    while not server.dead:
-        for commit in server.pending_commits:
-            print "running redistribute"
-            print server.pending_commits
-            dispatch_tests(server, commit)
-            time.sleep(5)
-
-
-class TreadingTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class ThreadingTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     runners = []
     dead = False
     dispatched_commits = {}
     pending_commits = []
 
 
-def DispatcherHandler(SocketServer.BaseRequestHandler):
-    command_re = re.compile(r"(\w+)(:.+)")
+class DispatcherHandler(SocketServer.BaseRequestHandler):
+    command_re = re.compile(r"(\w+)(:.+)*")
     BUF_SIZE = 1024
+
     def handle(self):
         self.data = self.request.recv(self.BUF_SIZE).strip()
         command_groups = self.command_re.match(self.data)
@@ -87,7 +67,7 @@ def DispatcherHandler(SocketServer.BaseRequestHandler):
             else:
                 self.request.sendall("OK")
                 dispatch_tests(self.server, commit_id)
-        elif command == "result":
+        elif command == "results":
             print "got test results"
             results = command_groups.group(2)[1:]
             results = results.split(":")
@@ -105,6 +85,8 @@ def DispatcherHandler(SocketServer.BaseRequestHandler):
                 data = "\n".join(data)
                 f.write(data)
             self.request.sendall("OK")
+        else:
+            self.request.sendall("Invalid command")
 
 
 def serve():
@@ -115,7 +97,7 @@ def serve():
     parser.add_argument("--port",
                         help = "dispatcher's port, by default it uses 8888.",
                         default = "8888")
-    args = parser.parse()
+    args = parser.parse_args()
 
     server = ThreadingTCPServer((args.host, int(args.port)), DispatcherHandler)
     print "serving on %s:%s" % (args.host, int(args.port))
@@ -131,3 +113,37 @@ def serve():
         runner_heartbeat.join()
         redistributor.join()
 
+
+def runner_checker(server):
+    def manage_commit_lists(runner):
+        for commit, assigned_runner in server.dispatched_commits.iteritems():
+            if assigned_runner == runner:
+                del server.dispatched_commits[commit]
+                server.pending_commits.append(commit)
+                break
+        server.runners.remove(runner)
+
+    while not server.dead:
+        time.sleep(1)
+        for runner in server.runners:
+            try:
+                response = helpers.communicate(runner["host"],
+                                               int(runner["port"]),
+                                               "ping")
+                if response != "pong":
+                    manage_commit_lists(runner)
+            except socket.error as e:
+                manage_commit_lists(runner)
+
+
+def redistribute(server):
+    while not server.dead:
+        for commit in server.pending_commits:
+            print "running redistribute"
+            print server.pending_commits
+            dispatch_tests(server, commit)
+            time.sleep(5)
+
+
+if __name__ == "__main__":
+    serve()

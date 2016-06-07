@@ -1,14 +1,20 @@
+"""
+Check for new commit and notify the dispatcher.
+"""
 import argparse
 import subprocess
 import os
-import helpers
 import socket
+import time
+
+import helpers
+
 
 def poll():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dispatcher-server",
-                        help = "dispatcher host:port, "\
-                            "by default it uses localhost:8888",
+                        help = "dispatcher host:port, " \
+                        "by default it uses localhost:8888",
                         default = "localhost:8888")
     parser.add_argument("repo",
                         help = "path to the repository "\
@@ -47,4 +53,3 @@ def poll():
 
 if __name__ == "__main__":
     poll()
-    

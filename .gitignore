@@ -2,3 +2,5 @@
 *~
 .*
 !.gitignore
+\#*\#
+ci/test_results/*
