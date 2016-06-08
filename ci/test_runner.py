@@ -48,6 +48,8 @@ class TestHandler(SocketServer.BaseRequestHandler):
                 self.server.busy = False
         else:
             self.request.sendall("Invalid command")
+
+
     def run_tests(self, commit_id, repo_folder):
         output = subprocess.check_output(["./test_runner_script.sh",
                                           repo_folder, commit_id])
