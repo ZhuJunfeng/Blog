@@ -1,17 +1,5 @@
 # Web-server
-A simple web server forked from [500lines](https://github.com/aosabook/500lines/tree/master/web-server).
-
-## Usage
-
-```bash
-$ python web_server.py
-```
-1. Serve static pages
-`http://localhost:8080/index.html`
-2. List directories
-`http://localhost:8080/resource`
-3. Support CGI protocol
-`http://localhost:8080/cgi.py`
+A simple web server in [500lines](https://github.com/aosabook/500lines/tree/master/web-server).
 
 ## Conclusion
 
